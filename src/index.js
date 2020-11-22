@@ -1,5 +1,5 @@
 const express = require('express');
-const { uuid } = require('uuidv4');
+const { uuid, isUuid } = require('uuidv4');
 const app = express();
 
 app.use(express.json());
@@ -21,9 +21,41 @@ app.use(express.json());
   * Request Body: O Conteudo na hora de criar ou editar um recurso.
   */
 
+/**
+ * Middlewares
+ * 
+ * Interceptador de requisições
+ * 
+ * pode INTERROMPER totalmente a requisição.
+ * pode ALTERAR dados da requisição.
+ */
+
 const projects = [];
 
-app.get('/projects', (request, response) => {
+function logRequests(request, response, next) {
+    const { method, url } = request;
+
+    const logLabel = `[${method.toUpperCase()}] ${url}`;
+
+    console.time(logLabel);
+
+    next(); //próximo middleware. Se não colocar interrompe req.
+    
+    console.timeEnd(logLabel);
+}
+
+function validateProjectId(request, response, next){
+    const [ id ] = request.params;
+
+    if(!isUuid(id)) return response.state(400).json({error: 'Invalid Project ID'});
+
+    return next();
+}
+
+app.use('/project/:id', validateProjectId);
+app.use(logRequests);
+
+app.get('/projects', logRequests, (request, response) => {
     const { title } = request.query;
 
     const results = title 
